@@ -1,184 +1,236 @@
 # Configuring-On-premises-Active-Directory-within-Azure-VMs
 <p align="center">
-  <img src="https://i.imgur.com/Ua7udoS.png" height="80%" width="80%" alt="Ubuntu VM" alt="Traffic Examination"/>
+<img src="https://i.imgur.com/pU5A58S.png" height="40%" width="70%"alt="Microsoft Active Directory Logo"/>
 </p>
 
-<h1>Network Security Groups (NSGs) and Inspecting Traffic Between Azure Virtual Machines</h1>
-In this tutorial, we observe various network traffic to and from Azure Virtual Machines with Wireshark as well as experiment with Network Security Groups. <br />
+<h1>Configuring Active Directory (On-Premises) Within Azure</h1>
+This tutorial outlines the implementation of on-premises Active Directory within Azure Virtual Machines.<br />
 
 
 <!-- <h2>Video Demonstration</h2>
 
-- ### [YouTube: Azure Virtual Machines, Wireshark, and Network Security Groups](https://www.youtube.com) -->
+- ### [YouTube: How to Deploy on-premises Active Directory within Azure Compute](https://www.youtube.com) -->
 
 <h2>Environments and Technologies Used</h2>
 
 - Microsoft Azure (Virtual Machines/Compute)
 - Remote Desktop
-- Various Command-Line Tools
-- Various Network Protocols (ICMP, SSH, DHCP, DNS, RDP)
-- Wireshark (Protocol Analyzer)
+- Active Directory Domain Services
+- PowerShell
 
 <h2>Operating Systems Used </h2>
 
+- Windows Server 2022
 - Windows 10 (21H2)
-- Ubuntu Server 20.04
 
-<h2>High-Level Steps</h2>
+<h2>High-Level Deployment and Configuration Steps</h2>
 
 - Create Resources
-- Observe ICMP Traffic
-- Observe SSH Traffic
-- Observe DHCP Traffic
-- Observe DNS Traffic
-- Observe RDP Traffic
+- Ensure Connectivity between the client and Domain Controller
+- Install Active Directory
+- Create an Admin and Normal User Account in AD
+- Join Client-1 to your domain (myadproject.com)
+- Setup Remote Desktop for non-administrative users on Client-1
+- Create a manu additional users and attempt to log into client-1 with one of the users
 
-<h2>Actions and Observations</h2>
-</br>
-</br>
-<h3 align="center">
-  Set up your virtual environment
-</h3>
-</br>
+<h2>Deployment and Configuration Steps</h2>
+<br />
+<br />
+<h3 align="center">Setup Resources in Azure</h3>
+<br />
 <p>
-  Create a Resource Group:
+  Create the Domain Controller VM (Windows Server 2022) named “DC-1”:
 </p>
 <p>
-  <img src="https://i.imgur.com/dOAeXqs.png" height="75%" width="100%" alt="Resource Group"/>
+  <img src="https://i.imgur.com/gaAzjvb.png" height="75%" width="100%" alt="resource group"/>
+  <img src="https://i.imgur.com/hubTfey.png" height="75%" width="100%" alt="vm ms server"/>
 </p>
 <p>
-  Create a Windows virtual machine.
+  Create the Client VM (Windows 10) named “Client-1”. Use the same Resource Group and Vnet that was created in previous step:
 </p>
 <p>
-  While creating the VM, select the previously created Resource Group and allow it to create a new Virtual Network (Vnet) and Subnet. Make sure to use the password option under the <strong>Administrator Account</strong> section (not seen in image):
+  <img src="https://i.imgur.com/XyEmv8f.png" height="75%" width="100%" alt="vm windows"/>
 </p>
 <p>
-  <img src="https://i.imgur.com/PHOwjLh.png" height="75%" width="100%" alt="Windows VM"/>
+  Set Domain Controller’s NIC Private IP address to be static:
 </p>
 <p>
-  Create an Ubuntu virtual machine.
+  <img src="https://i.imgur.com/KHU9kC4.png" height="75%" width="100%" alt="static ip"/>
 </p>
 <p>
-  While creating the VM, select the previously created Resource Group and allow it to create a new Virtual Network (Vnet) and Subnet. Make sure to use the password option under the <strong>Administrator Account</strong> section (not seen in image):
+  Ensure that both VMs are in the same Vnet (you can check the topology with Network Watcher):
 </p>
 <p>
-  <img src="https://i.imgur.com/N5zwQUH.png" height="75%" width="100%" alt="Ubuntu VM"/>
-</p>
-<p>
-  Observe Your Virtual Network within Network Watcher:
-</p>
-<p>
-  <img src="https://i.imgur.com/Pn02GXF.png" height="75%" width="100%" alt="Network Watcher"/>
+  <img src="https://i.imgur.com/rFpHLdQ.png" height="75%" width="100%" alt="topology"/>
 </p>
 <br />
 <br />
-<h3 align="center">
-  Now let's observe some ICMP traffic
-</h3>
+<h3 align="center">Ensure Connectivity between the client and Domain Controller</h3>
 <br />
 <p>
-  Remote into your Windows 10 Virtual Machine, install Wireshark, open it and filter for ICMP traffic only. If you are using a Mac like me, you'll have to download <strong><a href="https://apps.apple.com/us/app/microsoft-remote-desktop/id1295203466?mt=12">Microsoft Remote Desktop</a></strong> from the app store:
+  Login to Client-1 with Remote Desktop and ping DC-1’s private IP address with ping -t <ip address> (perpetual ping):
 </p>
 <p>
-  <img src="https://i.imgur.com/x1K1646.png" height="75%" width="100%" alt="Microsoft Remote Desktop - Mac"/>
+  <img src="https://i.imgur.com/bnPM9tX.png" height="75%" width="100%" alt="perpetual ping"/>
 </p>
 <p>
-  Retrieve the private IP address of the Ubuntu VM and attempt to ping it from within the Windows 10 VM. Observe ping requests and replies within WireShark:
+  Login to the Domain Controller and enable ICMPv4 in on the local windows firewall:
 </p>
 <p>
-  <img src="https://i.imgur.com/yYGKuAy.png" height="75%" width="100%" alt="Ubuntu private IP"/>
-  <img src="https://i.imgur.com/3h9QSEY.png" height="75%" width="100%" alt="ICMP traffic - private IP"/>
+  <img src="https://i.imgur.com/ZpPyEkt.png" height="75%" width="100%" alt="enable ICMPv4"/>
 </p>
 <p>
-  Attempt to ping a public website (such as www.google.com) and observe the traffic in WireShark:
+  Check back at Client-1 to see the ping succeed:
 </p>
 <p>
-  <img src="https://i.imgur.com/YduMvc7.png" height="75%" width="100%" alt="ICMP traffic - public IP"/>
-</p>
-<p>
-  Initiate a perpetual/non-stop ping from your Windows 10 VM to your Ubuntu VM:
-</p>
-<p>
-  <img src="https://i.imgur.com/bihftKK.png" height="75%" width="100%" alt="ICMP traffic - perpetual ping"/>
-</p>
-<p>
-  Open the Network Security Group your Ubuntu VM is using and disable incoming (inbound) ICMP traffic, while back in the Windows 10 VM, observe the ICMP traffic in WireShark and the command line Ping activity:
-</p>
-<p>
-  <img src="https://i.imgur.com/ovGk5dq.png" height="75%" width="100%" alt="ICMP traffic - perpetual ping"/>
-  <img src="https://i.imgur.com/NjuUANI.png" height="75%" width="100%" alt="ICMP traffic - ICMP denied"/>
-</p>
-<p>
-  Re-enable ICMP traffic for the Network Security Group in your Ubuntu VM and back in the Windows 10 VM, observe the ICMP traffic in WireShark and the command line ping activity (should start working again).Finally, stop the ping activity:
-</p>
-<p>
-  <img src="https://i.imgur.com/nZbl2sA.png" height="75%" width="100%" alt="ICMP traffic - ICMP re-enabled"/>
+  <img src="https://i.imgur.com/8o3OfjY.png" height="75%" width="100%" alt="ping success"/>
 </p>
 <br />
 <br />
-<h3 align="center">
-  Time to observe SSH traffic
-</h3>
+<h3 align="center">Install Active Directory</h3>
 <br />
 <p>
-  Back in Wireshark, filter for SSH traffic only and from your Windows 10 VM, “SSH into” your Ubuntu virtual machine (via its private IP address). Type commands (ls, pwd, etc) into the linux SSH connection and observe SSH traffic spam in WireShark.
-</p>
-</p>
-  Exit the SSH connection by typing ‘exit’ and pressing [return]:
-</p>
-  <img src="https://i.imgur.com/6YEDJKu.png" height="75%" width="100%" alt="SSH traffic"/>
-<p>
-<br />
-<br />
-<h3 align="center">
-  And why not observe DHCP Traffic now
-</h3>
-<br />
-<p>
-  Back in Wireshark, filter for DHCP traffic only. From your Windows 10 VM, attempt to issue your VM a new IP address from the command line (ipconfig /renew)
-</p>
-Observe the DHCP traffic appearing in WireShark:
+  Login to DC-1 and install Active Directory Domain Services:
 </p>
 <p>
-  <img src="https://i.imgur.com/mKyAHFr.png" height="75%" width="100%" alt="DHCP traffic"/>
-</p>
-<br />
-<br />
-<h3 align="center">
-  Let's observe DNS traffic next
-</h3>
-<br />
-<p>
-  Back in Wireshark, filter for DNS traffic only.
+  <img src="https://i.imgur.com/A1V9XJ5.png" height="75%" width="100%" alt="active directory install"/>
 </p>
 <p>
-  From your Windows 10 VM within a command line, use nslookup to see what google.com and disney.com’s IP addresses are and observe the DNS traffic being shown in WireShark:
+  Promote as a Domain Controller:
 </p>
 <p>
-  <img src="https://i.imgur.com/mYZ8CAK.png" height="75%" width="100%" alt="DNS traffic"/>
+  <img src="https://i.imgur.com/zi15fw4.png" height="75%" width="100%" alt="domain controller promotion"/>
+</p>
+<p>
+  Setup a new forest as myactivedirectory.com (can be anything, just remember what it is - I ultimately did set it up as myadproject.com which you'll see in the next pic):
+</p>
+<p>
+  <img src="https://i.imgur.com/DCFUVrM.png" height="75%" width="100%" alt="set new forest"/>
+</p>
+<p>
+  Restart and then log back into DC-1 as user: myadproject.com\labuser:
+</p>
+<p>
+  <img src="https://i.imgur.com/7UakWMQ.png" height="75%" width="100%" alt="fqdn login"/>
 </p>
 <br />
 <br />
-<h3 align="center">
-  And finally, we will observe RDP traffic to finish up this tutorial
-</h3>
+<h3 align="center">Create an Admin and Normal User Account in AD</h3>
 <br />
 <p>
-  Back in Wireshark, filter for RDP traffic only (tcp.port == 3389).
+  In Active Directory Users and Computers (ADUC), create an Organizational Unit (OU) called “_EMPLOYEES” and another one called "_ADMINS":
 </p>
 <p>
-  Oserve the immediate non-stop spam of traffic? Why is it non-stop spamming vs only showing traffic when a command is inputted?
+  <img src="https://i.imgur.com/cYmv0r7.png" height="75%" width="100%" alt="organizational unit"/>
+  <img src="https://i.imgur.com/v02CBPI.png" height="75%" width="100%" alt="organizational unit"/>
 </p>
 <p>
-  The answer is because the RDP (protocol) is constantly showing you a live stream from one computer to another, therefor traffic is always being transmitted:
+  Create a new employee named “Jane Doe” with the username of “jane_admin”:
 </p>
 <p>
-  <img src="https://i.imgur.com/hNlhTVp.png" height="75%" width="100%" alt="RDP traffic"/>
+  <img src="https://i.imgur.com/h546E6L.png" height="75%" width="100%" alt="admin creation"/>
+</p>
+<p>
+  Add jane_admin to the “Domain Admins” Security Group:
+</p>
+<p>
+  <img src="https://i.imgur.com/mnLwTgq.png" height="75%" width="100%" alt="security group"/>
+</p>
+<p>  
+  Log out/close the Remote Desktop connection to DC-1 and log back in as “myadproject.com\jane_admin”. Use jane_admin as your admin account from now on:
+</p>
+<p>
+  <img src="https://i.imgur.com/xWZ4Kol.png" height="75%" width="100%" alt="admin login"/>
+</p>
+<br />
+<br />
+<h3 align="center">Join Client-1 to your domain (myadproject.com)</h3>
+<br />
+<p>
+  From the Azure Portal, set Client-1’s DNS settings to the DC’s Private IP address:
+</p>
+<p>
+  <img src="https://i.imgur.com/1KRsjI6.png" height="75%" width="100%" alt="client dns settings"/>
+</p>
+<p>
+  From the Azure Portal, restart Client-1.
+</p>
+<p>
+  Login to Client-1 (Remote Desktop) as the original local admin (labuser) and join it to the domain (computer will restart):
+</p>
+<p>
+  <img src="https://i.imgur.com/50wszcP.png" height="75%" width="100%" alt="domain joining"/>
+</p>
+<p>
+  Login to the Domain Controller (Remote Desktop) and verify Client-1 shows up in Active Directory Users and Computers (ADUC) inside the “Computers” container on the root of the domain.
+</p>
+<p>
+  Create a new OU named “_CLIENTS” and drag Client-1 into there:
+</p>
+<p>
+  <img src="https://i.imgur.com/vB1n9m0.png" height="75%" width="100%" alt="active directory client verification"/>
+</p>
+<br />
+<br />
+<h3 align="center">Setup Remote Desktop for non-administrative users on Client-1</h3>
+<br />
+<p>
+  Log into Client-1 as mydomain.com\jane_admin and open system properties.
+</p>
+<p>
+  Click “Remote Desktop”.
+</p>
+<p>
+  Allow “domain users” access to remote desktop.
+</p>
+<p>
+  You can now log into Client-1 as a normal, non-administrative user now.
+</p>
+<p>
+  Normally you’d want to do this with Group Policy that allows you to change MANY systems at once (maybe a future lab):
+</p>
+<p>
+  <img src="https://i.imgur.com/8BfpT3s.png" height="75%" width="100%" alt="remote desktop setup"/>
+</p>
+<br />
+<br />
+<h3 align="center">Create a bunch of additional users and attempt to log into client-1 with one of the users</h3>
+<br />
+<p>
+  Login to DC-1 as jane_admin
+</p>
+<p>
+  Open PowerShell_ise as an administrator.
+</p> 
+<p>  
+  Create a new File and paste the contents of this script (https://github.com/agruezo/configure-active-directory/blob/script/createUsers.ps1) into it:
+</p>
+<p>
+  <img src="https://i.imgur.com/0i8uApf.png" height="75%" width="100%" alt="create users script"/>
+</p>
+<p>
+  Run the script and observe the accounts being created:
+</p>
+<p>
+  <img src="https://i.imgur.com/6QOGzs6.png" height="75%" width="100%" alt="observe create users script"/>
+</p>
+<p>
+  When finished, open ADUC and observe the accounts in the appropriate OU and attempt to log into Client-1 with one of the accounts (take note of the password in the script):
+</p>
+<p>
+  <img src="https://i.imgur.com/ZZCfiCp.png" height="75%" width="100%" alt="employee user accounts"/>
+  <img src="https://i.imgur.com/7gBpNzN.png" height="75%" width="100%" alt="employee user selection"/>
+  <img src="https://i.imgur.com/cqsddjn.png" height="75%" width="100%" alt="employee user login"/>
 </p>
 <br />
 <br />
 <p>
-  Monitor network security protocols and analyze traffic between virtual machines.
-
-
+  I hope this tutorial helped you learn a little bit about network security protocols and observe traffic between virtual machines. And although I ran this on a my MacBook Air, this can be easily done on a PC without having to download a remote desktop app since Windows provides that with it's software.
+</p>
+<p>
+  And now that we're done, DON'T FORGET TO CLEAN UP YOUR AZURE ENVIRONMENT so that you don't incur unnecessary charges.
+</p>
+<p>
+  Close your Remote Desktop connection, delete the Resource Group(s) created at the beginning of this tutorial, and verify Resource Group deletion.
+</p>
 
